@@ -1,11 +1,11 @@
 
 class Pacman(object):
 
-    def __init__(self, x, y, block_size):
+    def __init__(self, x, y, block_size, speed):
         self.position = (x, y)
         self.block_size = block_size
         self.screen_position = [a * block_size for a in self.position]
-        self.speed = 4
+        self.speed = speed
         self.direction = "E"
 
     def get_x(self):

@@ -31,6 +31,13 @@ class Maze(object):
                 x = 0
                 y += 1
 
+    def get_legal_directions(self, x, y):
+        directions = ["N", "S", "E", "W"]
+        legal = []
+        for dir in directions:
+            if self.is_path_legal(x, y, dir):
+                legal.append(dir)
+        return legal
 
     def is_path_legal(self, x, y, dir):
         if dir == "":
@@ -39,6 +46,13 @@ class Maze(object):
         if cur_cell.walls[dir]:
             return False
         return True
+
+    def is_cell_critical(self, x, y):
+        dirs = self.get_legal_directions(x, y)
+        if len(dirs) <= 2:
+            return False
+        return True
+
 
     def cell_at(self, x, y):
         """Return the Cell object at (x,y)."""

@@ -1,7 +1,6 @@
-import pygame
-import Maze, Pacman, Pellet, Jarvis
+import pygame, time
+import Maze, Pacman, Pellet
 
-AI_playing = True
 block_size = 32
 size_of_grid = [19, 21]
 blockImage = pygame.image.load("Images/Block.png")
@@ -31,31 +30,42 @@ no_pellet_positions = ((8, 6), (10, 6),
 class GameController(object):
 
 
-    def __init__(self):
+    def __init__(self, AI_Player):
+        self.Jarvis = AI_Player
+        self.AI_playing = False
+        if self.Jarvis is not None:
+            self.AI_playing = True
         self.setup()
         self.build_maze()
         self.add_pellets()
         self.add_pacman()
+        self.cur_position = self.pacman.position
         self.add_ghosts()
-        self.setup_AI()
         self.start_game()
+
 
     def setup(self):
         pygame.init()
+
+        pygame.font.init()
+        self.screen_font = pygame.font.SysFont('Comic Sans MS', 12)
 
         size = [a*32 for a in size_of_grid]
         self.screen = pygame.display.set_mode(size)
         pygame.display.set_caption("My Computer Learns Pacman")
 
+        self.last_direction = "E"
         self.pacman_position_changed = False
         self.ghost_position_changed = [False, False, False, False]
         self.playing_game = True
         self.score = 0
+        self.last_score_increase = time.time()
+        self.last_position_change = time.time()
+        self.start_time = time.time()
+
 
         self.clock = pygame.time.Clock()
 
-    def setup_AI(self):
-        self.Jarvis = Jarvis.Jarvis()
 
     def build_maze(self):
         self.maze = Maze.Maze(size_of_grid[0], size_of_grid[1])
@@ -88,8 +98,24 @@ class GameController(object):
     def draw_background(self):
         self.screen.fill((0, 0, 0))
 
+    def draw_text(self):
+
+        score_surface = self.screen_font.render('Score: %s' % self.score, False, (255,255,255))
+        self.screen.blit(score_surface, (5, 5))
+
+        if not self.AI_playing:
+            return
+        gen_surface = self.screen_font.render('Gen: %s' % self.Jarvis.gen, False, (255,255,255))
+        num_surface = self.screen_font.render('Num: %s' % self.Jarvis.num, False, (255,255,255))
+
+        self.screen.blit(gen_surface, (165, 5))
+        self.screen.blit(num_surface, (300, 5))
+
     def add_pacman(self):
-        self.pacman = Pacman.Pacman(9, 15, block_size)
+        speed = 4
+        if self.AI_playing:
+            speed = 32
+        self.pacman = Pacman.Pacman(9, 15, block_size, speed)
         self.screen.blit(pacmanImage, (self.pacman.get_screen_x(), self.pacman.get_screen_y()))
         pygame.display.update()
 
@@ -109,7 +135,24 @@ class GameController(object):
             cur_screen_x = cur_screen_x - self.pacman.speed
 
         self.pacman.set_screen_position(cur_screen_x, cur_screen_y)
-        self.screen.blit(pacmanImage, (cur_screen_x, cur_screen_y))
+
+        if self.pacman.direction == "N":
+            self.screen.blit(pygame.transform.rotate(pacmanImage, 90), (cur_screen_x, cur_screen_y))
+        elif self.pacman.direction == "S":
+            self.screen.blit(pygame.transform.rotate(pacmanImage, -90), (cur_screen_x, cur_screen_y))
+        elif self.pacman.direction == "E":
+            self.screen.blit(pacmanImage, (cur_screen_x, cur_screen_y))
+        elif self.pacman.direction == "W":
+            self.screen.blit(pygame.transform.rotate(pacmanImage, 180), (cur_screen_x, cur_screen_y))
+        else:
+            if self.last_direction == "N":
+                self.screen.blit(pygame.transform.rotate(pacmanImage, 90), (cur_screen_x, cur_screen_y))
+            elif self.last_direction == "S":
+                self.screen.blit(pygame.transform.rotate(pacmanImage, -90), (cur_screen_x, cur_screen_y))
+            elif self.last_direction == "E":
+                self.screen.blit(pacmanImage, (cur_screen_x, cur_screen_y))
+            elif self.last_direction == "W":
+                self.screen.blit(pygame.transform.rotate(pacmanImage, 180), (cur_screen_x, cur_screen_y))
 
         if cur_screen_x % 32 == 0 and cur_screen_y % 32 == 0:
             self.pacman_position_changed = True
@@ -119,52 +162,77 @@ class GameController(object):
         self.draw_background()
         self.draw_blocks()
         self.draw_pellets()
+        self.draw_text()
         self.update_pacman()
 
     def start_game(self):
         while self.playing_game:
 
-            if not AI_playing:
+            if not self.AI_playing:
                 self.read_keyboard_input()
             else:
+                inputs = self.get_AI_inputs()
+                self.Jarvis.set_inputs((inputs))
                 self.read_AI_input()
             self.draw_everything()
 
             if self.pacman_position_changed:
                 if not self.maze.is_path_legal(self.pacman.get_x(), self.pacman.get_y(), self.pacman.direction):
+                    self.last_direction = self.pacman.direction
                     self.pacman.direction = ""
                 self.pacman_position_changed = False
                 if self.pacman.position in self.pellet_positions:
                     self.score += 10
+                    self.last_score_increase = time.time()
                     self.pellet_positions.remove(self.pacman.position)
 
             pygame.display.update()
             pygame.event.pump()
-            print(self.score)
+
+            time_since_last_score = time.time() - self.last_score_increase
+            time_since_last_position_change = time.time() - self.last_position_change
+            if self.AI_playing:
+                if time_since_last_score > 2 or time_since_last_position_change > 0.2:
+                    self.playing_game = False
+                    self.Jarvis.end_game(self.score)
+                if not self.pacman.position == self.cur_position:
+                    self.cur_position = self.pacman.position
+                    self.last_position_change = time.time()
+
+            if not self.AI_playing:
+                data_file = open(r".\dataFile.txt", "a")
+                data_file.writelines(self.input_to_print + "\n")
+                data_file.writelines(str(self.get_AI_inputs()) + "\n")
+                data_file.close()
             self.clock.tick(30)
 
     def read_keyboard_input(self):
+        self.input_to_print = self.pacman.direction
         pressed_keys = pygame.key.get_pressed()
         in_center = self.pacman.get_screen_x() % 32 == 0 and self.pacman.get_screen_y() % 32 == 0
         if pressed_keys[pygame.K_LEFT]:
+            self.input_to_print = "W"
             if self.maze.is_path_legal(self.pacman.get_x(), self.pacman.get_y(), "W"):
                 if self.pacman.direction == "E" or in_center:
                     self.pacman.set_direction("W")
         if pressed_keys[pygame.K_RIGHT]:
+            self.input_to_print = "E"
             if self.maze.is_path_legal(self.pacman.get_x(), self.pacman.get_y(), "E"):
                 if self.pacman.direction == "W" or in_center:
                     self.pacman.set_direction("E")
         if pressed_keys[pygame.K_DOWN]:
+            self.input_to_print = "S"
             if self.maze.is_path_legal(self.pacman.get_x(), self.pacman.get_y(), "S"):
                 if self.pacman.direction == "N" or in_center:
                     self.pacman.set_direction("S")
         if pressed_keys[pygame.K_UP]:
+            self.input_to_print = "N"
             if self.maze.is_path_legal(self.pacman.get_x(), self.pacman.get_y(), "N"):
                 if self.pacman.direction == "S" or in_center:
                     self.pacman.set_direction("N")
 
     def read_AI_input(self):
-        pressed_key = self.Jarvis.select_random_key()
+        pressed_key = self.Jarvis.select_key_from_net()
         in_center = self.pacman.get_screen_x() % 32 == 0 and self.pacman.get_screen_y() % 32 == 0
         if pressed_key == "left":
             if self.maze.is_path_legal(self.pacman.get_x(), self.pacman.get_y(), "W"):
@@ -183,7 +251,106 @@ class GameController(object):
                 if self.pacman.direction == "S" or in_center:
                     self.pacman.set_direction("N")
 
+                    
+    def get_AI_inputs(self):
+        gN, gS, gE, gW = 0, 0, 0, 0
+        wN, wS, wE, wW = 0, 0, 0, 0
+        pN, pS, pE, pW = 0, 0, 0, 0
+        if not self.maze.is_path_legal(self.pacman.get_x(), self.pacman.get_y(), "N"):
+            wN = 1
+            pN = -1
+        if not self.maze.is_path_legal(self.pacman.get_x(), self.pacman.get_y(), "S"):
+            wS = 1
+            pS = -1
+        if not self.maze.is_path_legal(self.pacman.get_x(), self.pacman.get_y(), "E"):
+            wE = 1
+            pE = -1
+        if not self.maze.is_path_legal(self.pacman.get_x(), self.pacman.get_y(), "W"):
+            wW = 1
+            pW = -1
+            
+        if not pN == -1:
+            pN = self.is_pellet_in_direction(self.pacman.get_x(), self.pacman.get_y(), "N")
+        if not pS == -1:
+            pS = self.is_pellet_in_direction(self.pacman.get_x(), self.pacman.get_y(), "S")
+        if not pE == -1:
+            pE = self.is_pellet_in_direction(self.pacman.get_x(), self.pacman.get_y(), "E")
+        if not pW == -1:
+            pW = self.is_pellet_in_direction(self.pacman.get_x(), self.pacman.get_y(), "W")
 
+        stimuli = (gN, gS, gE, gW, pN, pS, pE, pW, wN, wS, wE, wW)
+        print(stimuli)
+        return stimuli
 
+    def is_pellet_in_direction(self, x, y, direction):
+        if direction == "N":
+            if (x, y - 1) in self.pellet_positions:
+                return 1
+            else:
+                if self.maze.is_path_legal(x, y, "N"):
+                    dist = self.is_pellet_in_direction(x, y + 1, "N")
+                    return 1 + dist if not dist == -1 else -1
+                else:
+                    return -1
+        elif direction == "S":
+            if (x, y + 1) in self.pellet_positions:
+                return 1
+            else:
+                if self.maze.is_path_legal(x, y, "S"):
+                    dist = self.is_pellet_in_direction(x, y - 1, "S")
+                    return 1 + dist if not dist == -1 else -1
+                else:
+                    return -1
+        elif direction == "E":
+            if (x + 1, y) in self.pellet_positions:
+                return 1
+            else:
+                if self.maze.is_path_legal(x, y, "E"):
+                    dist = self.is_pellet_in_direction(x + 1, y, "E")
+                    return 1 + dist if not dist == -1 else -1
+                else:
+                    return -1
+        elif direction == "W":
+            if (x - 1, y) in self.pellet_positions:
+                return 1
+            else:
+                if self.maze.is_path_legal(x, y, "W"):
+                    dist = self.is_pellet_in_direction(x - 1, y, "W")
+                    return 1 + dist if not dist == -1 else -1
+                else:
+                    return -1
 
-GameController()
+    def distance_to_pellet(self, x, y, direction, visited):
+        og_visited = visited[:]
+        if (x, y) in self.pellet_positions:
+            return 1
+        else:
+            directions = self.maze.get_legal_directions(x, y)
+            if len(directions) == 0:
+                return 9999
+            northDir, southDir, eastDir, westDir = 9999,9999,9999,9999
+            for dir in directions:
+                if dir == "N" and not (x, y-1) in visited:
+                    visited.append((x, y-1))
+                    northDir = min(self.distance_to_pellet(x, y - 1, "N", visited), self.distance_to_pellet(x, y - 1, "S", visited),
+                                   self.distance_to_pellet(x, y - 1, "E", visited), self.distance_to_pellet(x, y - 1, "W", visited))
+                    visited = og_visited
+                elif dir == "S" and not (x, y + 1) in visited:
+                    visited.append((x, y + 1))
+                    southDir = min(self.distance_to_pellet(x, y + 1, "N", visited), self.distance_to_pellet(x, y + 1, "S", visited),
+                                   self.distance_to_pellet(x, y + 1, "E", visited), self.distance_to_pellet(x, y + 1, "W", visited))
+                    visited = og_visited
+                elif dir == "E" and not (x + 1, y) in visited:
+                    visited.append((x + 1, y))
+                    eastDir = min(self.distance_to_pellet(x + 1, y, "N", visited), self.distance_to_pellet(x + 1, y, "S", visited),
+                                   self.distance_to_pellet(x + 1, y, "E", visited), self.distance_to_pellet(x + 1, y, "W", visited))
+                    visited = og_visited
+                elif dir == "W" and not (x - 1, y) in visited:
+                    visited.append((x - 1, y))
+                    westDir = min(self.distance_to_pellet(x - 1, y, "N", visited), self.distance_to_pellet(x - 1, y, "S", visited),
+                                   self.distance_to_pellet(x - 1, y, "E", visited), self.distance_to_pellet(x - 1, y, "W", visited))
+                    visited = og_visited
+            return min(northDir, southDir, eastDir, westDir) + 1
+
+if __name__ == '__main__':
+    GameController(None)
