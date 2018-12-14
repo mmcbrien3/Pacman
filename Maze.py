@@ -39,6 +39,20 @@ class Maze(object):
                 legal.append(dir)
         return legal
 
+    def get_legal_neighbors(self, x, y):
+        dirs = self.get_legal_directions(x, y)
+        legal = []
+        for d in dirs:
+            if d == "N":
+                legal.append((x, y - 1))
+            elif d == "S":
+                legal.append((x, y + 1))
+            elif d == "E":
+                legal.append((x + 1, y))
+            elif d == "W":
+                legal.append((x - 1, y))
+        return legal
+
     def is_path_legal(self, x, y, dir):
         if dir == "":
             return True
@@ -53,6 +67,19 @@ class Maze(object):
             return False
         return True
 
+    def get_position_in_direction(self, x, y, d):
+        x_ret = x
+        y_ret = y
+        if d == "N":
+            y_ret -= 1
+        elif d == "S":
+            y_ret += 1
+        elif d == "E":
+            x_ret += 1
+        elif d == "W":
+            x_ret -= 1
+
+        return (x_ret, y_ret)
 
     def cell_at(self, x, y):
         """Return the Cell object at (x,y)."""

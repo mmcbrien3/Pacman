@@ -1,12 +1,24 @@
 import pygame, time
-import Maze, Pacman, Pellet
+import Maze, Pacman, Pellet, RedGhost, PinkGhost, BlueGhost, OrangeGhost
 
 block_size = 32
 size_of_grid = [19, 21]
 blockImage = pygame.image.load("Images/Block.png")
 pacmanImage = pygame.image.load("Images/Pacman.png")
 pelletImage = pygame.image.load("Images/Pellet.png")
+redGhostImage = pygame.image.load("Images/RedGhost.png")
+pinkGhostImage = pygame.image.load("Images/PinkGhost.png")
+blueGhostImage = pygame.image.load("Images/BlueGhost.png")
+orangeGhostImage = pygame.image.load("Images/OrangeGhost.png")
+
 pacmanImage.set_colorkey((0, 0, 0))
+redGhostImage.set_colorkey((0, 0, 0))
+pinkGhostImage.set_colorkey((0, 0, 0))
+blueGhostImage.set_colorkey((0, 0, 0))
+orangeGhostImage.set_colorkey((0, 0, 0))
+
+chaseInterval = 20
+scatterInterval = 7
 
 no_pellet_positions = ((8, 6), (10, 6),
 
@@ -62,6 +74,10 @@ class GameController(object):
         self.last_score_increase = time.time()
         self.last_position_change = time.time()
         self.start_time = time.time()
+        self.scatter_start = time.time()
+        self.chase_start = None
+        self.scatter = True
+        self.chase = False
 
 
         self.clock = pygame.time.Clock()
@@ -110,6 +126,45 @@ class GameController(object):
 
         self.screen.blit(gen_surface, (165, 5))
         self.screen.blit(num_surface, (300, 5))
+        
+    def update_ghosts(self):
+        self.update_ghost_mode()
+        for i, g in enumerate(self.ghosts):
+            g.update_direction()
+            cur_screen_x = g.get_screen_x()
+            cur_screen_y = g.get_screen_y()
+            if g.direction == "N":
+                cur_screen_y = cur_screen_y - g.speed
+            elif g.direction == "S":
+                cur_screen_y = cur_screen_y + g.speed
+            elif g.direction == "E":
+                cur_screen_x = cur_screen_x + g.speed
+            elif g.direction == "W":
+                cur_screen_x = cur_screen_x - g.speed
+
+            g.set_screen_position(cur_screen_x, cur_screen_y)
+            self.screen.blit(self.ghost_images[i], (cur_screen_x, cur_screen_y))
+
+            if self.position_changed(cur_screen_x, cur_screen_y):
+                g.set_position(int(cur_screen_x / 32), int(cur_screen_y / 32))
+
+    def update_ghost_mode(self):
+        if self.scatter:
+            if time.time() - self.scatter_start > scatterInterval:
+                self.chase_start = time.time()
+                self.chase = True
+                self.scatter = False
+                for g in self.ghosts:
+                    g.update_mode()
+        elif self.chase:
+            if time.time() - self.chase_start > chaseInterval:
+                self.scatter_start = time.time()
+                self.chase = False
+                self.scatter = True
+                for g in self.ghosts:
+                    g.update_mode()
+
+
 
     def add_pacman(self):
         speed = 4
@@ -120,19 +175,25 @@ class GameController(object):
         pygame.display.update()
 
     def add_ghosts(self):
+        self.ghosts = [RedGhost.RedGhost(10, 7, self.maze, 4, self.pacman, block_size),
+                       PinkGhost.PinkGhost(9, 9, self.maze, 4, self.pacman, block_size)]
+        self.ghosts.append(BlueGhost.BlueGhost(11, 9, self.maze, 4, self.pacman, block_size, self.ghosts[0]))
+        self.ghosts.append(OrangeGhost.OrangeGhost(10, 9, self.maze, 4, self.pacman, block_size))
+        self.ghost_images = [redGhostImage, pinkGhostImage, blueGhostImage, orangeGhostImage]
         pass
 
     def update_pacman(self):
         cur_screen_x = self.pacman.get_screen_x()
         cur_screen_y = self.pacman.get_screen_y()
-        if self.pacman.direction == "N":
-            cur_screen_y = cur_screen_y-self.pacman.speed
-        elif self.pacman.direction == "S":
-            cur_screen_y = cur_screen_y + self.pacman.speed
-        elif self.pacman.direction == "E":
-            cur_screen_x = cur_screen_x + self.pacman.speed
-        elif self.pacman.direction == "W":
-            cur_screen_x = cur_screen_x - self.pacman.speed
+        if self.maze.is_path_legal(self.pacman.position[0], self.pacman.position[1], self.pacman.direction):
+            if self.pacman.direction == "N":
+                cur_screen_y = cur_screen_y-self.pacman.speed
+            elif self.pacman.direction == "S":
+                cur_screen_y = cur_screen_y + self.pacman.speed
+            elif self.pacman.direction == "E":
+                cur_screen_x = cur_screen_x + self.pacman.speed
+            elif self.pacman.direction == "W":
+                cur_screen_x = cur_screen_x - self.pacman.speed
 
         self.pacman.set_screen_position(cur_screen_x, cur_screen_y)
 
@@ -154,15 +215,22 @@ class GameController(object):
             elif self.last_direction == "W":
                 self.screen.blit(pygame.transform.rotate(pacmanImage, 180), (cur_screen_x, cur_screen_y))
 
-        if cur_screen_x % 32 == 0 and cur_screen_y % 32 == 0:
+        if self.position_changed(cur_screen_x, cur_screen_y):
             self.pacman_position_changed = True
             self.pacman.set_position(int(cur_screen_x / 32), int(cur_screen_y / 32))
-
+    
+    def position_changed(self, x, y):
+        if x % 32 == 0 and y % 32 == 0:
+            return True
+        else:
+            return False
+        
     def draw_everything(self):
         self.draw_background()
         self.draw_blocks()
         self.draw_pellets()
         self.draw_text()
+        self.update_ghosts()
         self.update_pacman()
 
     def start_game(self):
@@ -179,7 +247,6 @@ class GameController(object):
             if self.pacman_position_changed:
                 if not self.maze.is_path_legal(self.pacman.get_x(), self.pacman.get_y(), self.pacman.direction):
                     self.last_direction = self.pacman.direction
-                    self.pacman.direction = ""
                 self.pacman_position_changed = False
                 if self.pacman.position in self.pellet_positions:
                     self.score += 10
@@ -204,6 +271,8 @@ class GameController(object):
                 data_file.writelines(self.input_to_print + "\n")
                 data_file.writelines(str(self.get_AI_inputs()) + "\n")
                 data_file.close()
+
+
             self.clock.tick(30)
 
     def read_keyboard_input(self):
@@ -279,7 +348,6 @@ class GameController(object):
             pW = self.is_pellet_in_direction(self.pacman.get_x(), self.pacman.get_y(), "W")
 
         stimuli = (gN, gS, gE, gW, pN, pS, pE, pW, wN, wS, wE, wW)
-        print(stimuli)
         return stimuli
 
     def is_pellet_in_direction(self, x, y, direction):
