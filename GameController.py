@@ -1,4 +1,4 @@
-import pygame, time
+import pygame, time, math
 import Maze, Pacman, Pellet, RedGhost, PinkGhost, BlueGhost, OrangeGhost
 
 block_size = 32
@@ -322,33 +322,40 @@ class GameController(object):
 
                     
     def get_AI_inputs(self):
-        gN, gS, gE, gW = 0, 0, 0, 0
+        g_one_ns, g_one_ew,  g_two_ns, g_two_ew = 0, 0, 0, 0
         wN, wS, wE, wW = 0, 0, 0, 0
-        pN, pS, pE, pW = 0, 0, 0, 0
+        p_one_ns, p_one_ew = 0, 0
         if not self.maze.is_path_legal(self.pacman.get_x(), self.pacman.get_y(), "N"):
             wN = 1
-            pN = -1
         if not self.maze.is_path_legal(self.pacman.get_x(), self.pacman.get_y(), "S"):
             wS = 1
-            pS = -1
         if not self.maze.is_path_legal(self.pacman.get_x(), self.pacman.get_y(), "E"):
             wE = 1
-            pE = -1
         if not self.maze.is_path_legal(self.pacman.get_x(), self.pacman.get_y(), "W"):
             wW = 1
-            pW = -1
-            
-        if not pN == -1:
-            pN = self.is_pellet_in_direction(self.pacman.get_x(), self.pacman.get_y(), "N")
-        if not pS == -1:
-            pS = self.is_pellet_in_direction(self.pacman.get_x(), self.pacman.get_y(), "S")
-        if not pE == -1:
-            pE = self.is_pellet_in_direction(self.pacman.get_x(), self.pacman.get_y(), "E")
-        if not pW == -1:
-            pW = self.is_pellet_in_direction(self.pacman.get_x(), self.pacman.get_y(), "W")
 
-        stimuli = (gN, gS, gE, gW, pN, pS, pE, pW, wN, wS, wE, wW)
+        pellet_distances = self.get_pellet_distances(self.pacman.get_x(), self.pacman.get_y())
+
+        p_one = pellet_distances[0]
+
+        p_one_ns = p_one[0]
+        p_one_ew = p_one[1]
+
+        stimuli = g_one_ns, g_one_ew,  g_two_ns, g_two_ew, wN, wS, wE, wW, p_one_ns, p_one_ew
+        print(stimuli)
         return stimuli
+
+    def get_pellet_distances(self, x, y):
+        dists = []
+        diff_dists = []
+        min = 9999
+        ind = -1
+        for i, p in enumerate(self.pellet_positions):
+            dist = math.sqrt((p[0] - x) ** 2 + (p[1] - y) ** 2)
+            dists.append(dist)
+            diff_dists.append((p[0]-x, p[1] - y))
+        return [x for _,x in sorted(zip(dists,diff_dists))]
+
 
     def is_pellet_in_direction(self, x, y, direction):
         if direction == "N":

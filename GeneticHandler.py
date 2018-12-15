@@ -3,11 +3,11 @@ import random, time
 from multiprocessing import Process
 from sklearn.externals import joblib
 
-layers = [5, 2]
+layers = [5]
 
 class GeneticHandler(object):
 
-    def __init__(self, popsize=50, elite_percent=0.2, keep_chance=0.1, mutate_chance = 0.05, numgenerations=None):
+    def __init__(self, popsize=50, elite_percent=0.05, keep_chance=0.1, mutate_chance = 0.05, numgenerations=None):
         self.elite = int(popsize*elite_percent)
         self.keep = int(popsize*keep_chance)
         self.mutate_chance = mutate_chance
@@ -43,33 +43,50 @@ class GeneticHandler(object):
         nets_by_score = sorted(self.cur_generation.items(), key=lambda kv: kv[1])
         print("Sorted nets")
         print(nets_by_score)
+        total_fitness, segmented_fitness = self.get_total_fitness(nets_by_score)
         nets_by_score = [j[0] for j in nets_by_score]
-        parents = nets_by_score[len(nets_by_score)-self.elite:]
+        elites = nets_by_score[len(nets_by_score)-self.elite:]
 
         best = nets_by_score[-1]
         joblib.dump(best.net, r".\Best.sav")
 
-        failures = nets_by_score[0:len(nets_by_score)-self.elite]
-        failure_indices = random.sample(range(0, len(failures)), self.keep)
-        lucky_failures = []
-        num_in_gen = 1
-        for ind in failure_indices:
-            lucky_failures.append(Jarvis.Jarvis(self.gens, num_in_gen, layers, failures[ind].net.coefs_, failures[ind].net.intercepts_))
+        for e in elites:
+            e.final_score = 0
 
-        parents += lucky_failures
-        new_generation = []
-        num_remaining = self.popsize
+        num_in_gen = 1
+
+        new_generation = elites
+        num_remaining = self.popsize - len(new_generation)
 
         for i in range(num_remaining):
-            (mother_ind, father_ind) = random.sample(range(0, len(parents)), 2)
-            mother = parents[mother_ind]
-            father = parents[father_ind]
+            mother, father = self.select_parents(nets_by_score, total_fitness, segmented_fitness)
             new_generation.append(self.breed(mother, father, num_in_gen))
             num_in_gen += 1
 
         self.cur_generation = {}
         for player in new_generation:
             self.cur_generation[player] = 0
+
+    def get_total_fitness(self, nets):
+        total = 0
+        segmented = []
+        for k, v in nets:
+            total += v
+            segmented.append(total)
+        return total, segmented
+
+    def select_parents(self, nets, total_fitness, segmented_fitness):
+        r = random.randint(0, total_fitness)
+        for i in range(len(segmented_fitness)):
+            if r <= segmented_fitness[i]:
+                break
+        mother = nets[i]
+        r = random.randint(0, total_fitness)
+        for i in range(len(segmented_fitness)):
+            if r <= segmented_fitness[i]:
+                break
+        father = nets[i]
+        return mother, father
 
 
     def breed(self, mother, father, id):

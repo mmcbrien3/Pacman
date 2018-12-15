@@ -46,7 +46,7 @@ class Jarvis(object):
         import GameController
         GameController.GameController(self)
 
-    #gN, gS, gE, gW, pts, pN, pS, pE, pW, wN, wS, wE, wW
+    #gN, gS, gE, gW, pN, pS, pE, pW, wN, wS, wE, wW
     def set_inputs(self, inputs):
         self.inputs = inputs
 
