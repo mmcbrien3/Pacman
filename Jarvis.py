@@ -71,9 +71,7 @@ class Jarvis(object):
         return self.net.predict([self.inputs])
 
     def select_shortest_pellet_route(self):
-        print(self.inputs[5:9])
         min_index = self.inputs[5:9].index(min(self.inputs[5:9]))
-        print(min_index)
         if min_index == 0:
             return "up"
         elif min_index == 1:

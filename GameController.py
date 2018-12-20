@@ -342,7 +342,6 @@ class GameController(object):
         p_one_ew = p_one[1]
 
         stimuli = g_one_ns, g_one_ew,  g_two_ns, g_two_ew, wN, wS, wE, wW, p_one_ns, p_one_ew
-        print(stimuli)
         return stimuli
 
     def get_pellet_distances(self, x, y):

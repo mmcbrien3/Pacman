@@ -4,20 +4,20 @@
 
 from __future__ import print_function
 import os
-import neat, GameController
+import neat, GameController, pickle
 # 2-input XOR inputs and expected outputs.
 pac_inputs = [(0, 0,  0, 0, 1, 1, 1, 0, 0, -1), (0, 0,  0, 0, 1, 1, 0, 1, 0, 1), (0, 0,  0, 0, 0, 1, 1, 1, -1, 0), (0, 0,  0, 0, 1, 0, 1, 1, 1, 0)]
 pac_outputs = ["left", "right", "up", "down"]
 
 class NEATHandler(object):
 
-    def __init__(self, config_file, gens):
+    def __init__(self, gens):
         self.gens = gens
         self.gen = 1
         self.num = 1
         self.numPerGen = 50
 
-        self.run(config_file)
+        self.run()
 
 
     def eval_genomes(self, genomes, config):
@@ -36,6 +36,7 @@ class NEATHandler(object):
                 self.num = 1
                 self.gen += 1
             self.num += 1
+            print("Done with generation #%s" % (self.gen))
 
     def select_key_from_net(self):
         outputs = self.net.activate(self.inputs)
@@ -48,11 +49,13 @@ class NEATHandler(object):
     def set_inputs(self, inputs):
         self.inputs = inputs
 
-    def run(self, config_file):
+    def run(self):
         # Load configuration.
+        local_dir = os.path.dirname(__file__)
+        config_path = os.path.join(local_dir, 'config-feedforward')
         config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
                              neat.DefaultSpeciesSet, neat.DefaultStagnation,
-                             config_file)
+                             config_path)
 
         # Create the population, which is the top-level object for a NEAT run.
         p = neat.Population(config)
@@ -69,19 +72,13 @@ class NEATHandler(object):
         # Display the winning genome.
         print('\nBest genome:\n{!s}'.format(winner))
 
-        # Show output of the most fit genome against training data.
-        print('\nOutput:')
-        winner_net = neat.nn.FeedForwardNetwork.create(winner, config)
-
-
-        p = neat.Checkpointer.restore_checkpoint('neat-checkpoint-4')
-        p.run(self.eval_genomes, 10)
+        with open('winner-feedforward', 'wb') as f:
+            pickle.dump(winner, f)
 
 
 if __name__ == '__main__':
     # Determine path to configuration file. This path manipulation is
     # here so that the script will run successfully regardless of the
     # current working directory.
-    local_dir = os.path.dirname(__file__)
-    config_path = os.path.join(local_dir, 'config-feedforward')
-    NEATHandler(config_path, 300)
+
+    NEATHandler(300)
