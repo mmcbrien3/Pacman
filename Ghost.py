@@ -64,14 +64,22 @@ class Ghost(object):
 
     def update_direction(self):
         if self.mode_changed:
+            self.last_decision_position = self.maze.get_position_in_direction(
+                self.position[0],
+                self.position[1],
+                self.direction)
             self.direction = self.get_opposite_direction()
             self.mode_changed = False
-            self.last_decision_position = self.position
             return
-        if not self.maze.is_cell_critical(self.position[0], self.position[1]) and self.maze.is_path_legal(self.position[0], self.position[1], self.direction):
+        if not self.maze.is_cell_critical(self.position[0], self.position[1]) and self.maze.is_path_legal(self.position[0], self.position[1], self.direction)\
+                or not self.is_in_center():
             return
         self.direction = self.get_movement_direction()
 
+    def is_in_center(self):
+        if self.get_screen_x() % self.block_size == 0 and self.get_screen_y() % self.block_size == 0:
+            return True
+        return False
 
     def get_movement_direction(self):
         if self.last_decision_position == self.position:

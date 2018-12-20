@@ -66,7 +66,6 @@ class NEATHandler(object):
         p.add_reporter(stats)
         p.add_reporter(neat.Checkpointer(5))
 
-        # Run for up to 300 generations.
         winner = p.run(self.eval_genomes, self.gens)
 
         # Display the winning genome.

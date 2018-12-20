@@ -17,8 +17,8 @@ pinkGhostImage.set_colorkey((0, 0, 0))
 blueGhostImage.set_colorkey((0, 0, 0))
 orangeGhostImage.set_colorkey((0, 0, 0))
 
-chaseInterval = 20
-scatterInterval = 7
+chaseInterval = 5
+scatterInterval = 3
 
 no_pellet_positions = ((8, 6), (10, 6),
 
@@ -177,7 +177,7 @@ class GameController(object):
     def add_ghosts(self):
         self.ghosts = [RedGhost.RedGhost(10, 7, self.maze, 4, self.pacman, block_size),
                        PinkGhost.PinkGhost(9, 9, self.maze, 4, self.pacman, block_size)]
-        self.ghosts.append(BlueGhost.BlueGhost(11, 9, self.maze, 4, self.pacman, block_size, self.ghosts[0]))
+        self.ghosts.append(BlueGhost.BlueGhost(8, 9, self.maze, 4, self.pacman, block_size, self.ghosts[0]))
         self.ghosts.append(OrangeGhost.OrangeGhost(10, 9, self.maze, 4, self.pacman, block_size))
         self.ghost_images = [redGhostImage, pinkGhostImage, blueGhostImage, orangeGhostImage]
         pass
@@ -301,6 +301,8 @@ class GameController(object):
                     self.pacman.set_direction("N")
 
     def read_AI_input(self):
+        if not self.maze.is_cell_critical(self.pacman.get_x(), self.pacman.get_y()):
+            return
         pressed_key = self.Jarvis.select_key_from_net()
         in_center = self.pacman.get_screen_x() % 32 == 0 and self.pacman.get_screen_y() % 32 == 0
         if pressed_key == "left":
@@ -322,6 +324,7 @@ class GameController(object):
 
                     
     def get_AI_inputs(self):
+
         g_one_ns, g_one_ew,  g_two_ns, g_two_ew = 0, 0, 0, 0
         wN, wS, wE, wW = 0, 0, 0, 0
         p_one_ns, p_one_ew = 0, 0
@@ -338,10 +341,11 @@ class GameController(object):
 
         p_one = pellet_distances[0]
 
-        p_one_ns = p_one[0]
-        p_one_ew = p_one[1]
+        p_one_ew = p_one[0]
+        p_one_ns = p_one[1]
 
         stimuli = g_one_ns, g_one_ew,  g_two_ns, g_two_ew, wN, wS, wE, wW, p_one_ns, p_one_ew
+        print(stimuli)
         return stimuli
 
     def get_pellet_distances(self, x, y):
