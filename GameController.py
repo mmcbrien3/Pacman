@@ -3,19 +3,30 @@ import Maze, Pacman, Pellet, RedGhost, PinkGhost, BlueGhost, OrangeGhost
 
 block_size = 32
 size_of_grid = [19, 21]
-blockImage = pygame.image.load("Images/Block.png")
-pacmanImage = pygame.image.load("Images/Pacman.png")
-pelletImage = pygame.image.load("Images/Pellet.png")
-redGhostImage = pygame.image.load("Images/RedGhost.png")
-pinkGhostImage = pygame.image.load("Images/PinkGhost.png")
-blueGhostImage = pygame.image.load("Images/BlueGhost.png")
-orangeGhostImage = pygame.image.load("Images/OrangeGhost.png")
+blockImage = pygame.image.load("Images/Block.bmp")
+pacmanImage = pygame.image.load("Images/Pacman.bmp")
+pelletImage = pygame.image.load("Images/Pellet.bmp")
+redGhostImage = pygame.image.load("Images/RedGhost.bmp")
+pinkGhostImage = pygame.image.load("Images/PinkGhost.bmp")
+blueGhostImage = pygame.image.load("Images/BlueGhost.bmp")
+orangeGhostImage = pygame.image.load("Images/OrangeGhost.bmp")
+redTargetImage = pygame.image.load("Images/RedTarget.bmp")
+pinkTargetImage = pygame.image.load("Images/PinkTarget.bmp")
+blueTargetImage = pygame.image.load("Images/BlueTarget.bmp")
+orangeTargetImage = pygame.image.load("Images/OrangeTarget.bmp")
 
 pacmanImage.set_colorkey((0, 0, 0))
 redGhostImage.set_colorkey((0, 0, 0))
 pinkGhostImage.set_colorkey((0, 0, 0))
 blueGhostImage.set_colorkey((0, 0, 0))
 orangeGhostImage.set_colorkey((0, 0, 0))
+redTargetImage.set_colorkey((0, 0, 0))
+pinkTargetImage.set_colorkey((0, 0, 0))
+blueTargetImage.set_colorkey((0, 0, 0))
+orangeTargetImage.set_colorkey((0, 0, 0))
+
+print(redGhostImage.get_colorkey())
+print(redTargetImage.get_colorkey())
 
 chaseInterval = 5
 scatterInterval = 3
@@ -96,6 +107,7 @@ class GameController(object):
             if not cell.is_block() and not cell.position in no_pellet_positions:
                 self.pellets.append(Pellet.Pellet(cell.get_x(), cell.get_y(), block_size))
                 self.pellet_positions.append((cell.get_x(), cell.get_y()))
+        self.total_pellets = len(self.pellets)
         self.draw_pellets()
         pygame.display.update()
 
@@ -130,6 +142,8 @@ class GameController(object):
     def update_ghosts(self):
         self.update_ghost_mode()
         for i, g in enumerate(self.ghosts):
+            if not g.active:
+                g.try_to_activate(self.total_pellets - len(self.pellet_positions))
             g.update_direction()
             cur_screen_x = g.get_screen_x()
             cur_screen_y = g.get_screen_y()
@@ -147,6 +161,12 @@ class GameController(object):
 
             if self.position_changed(cur_screen_x, cur_screen_y):
                 g.set_position(int(cur_screen_x / 32), int(cur_screen_y / 32))
+                
+    def draw_targets(self):
+        self.screen.blit(redTargetImage, (self.ghosts[0].target_square[0]*block_size, self.ghosts[0].target_square[1]*block_size))
+        self.screen.blit(pinkTargetImage, (self.ghosts[1].target_square[0]*block_size, self.ghosts[1].target_square[1]*block_size))
+        self.screen.blit(blueTargetImage, (self.ghosts[2].target_square[0]*block_size, self.ghosts[2].target_square[1]*block_size))
+        self.screen.blit(orangeTargetImage, (self.ghosts[3].target_square[0]*block_size, self.ghosts[3].target_square[1]*block_size))
 
     def update_ghost_mode(self):
         if self.scatter:
@@ -175,7 +195,7 @@ class GameController(object):
         pygame.display.update()
 
     def add_ghosts(self):
-        self.ghosts = [RedGhost.RedGhost(10, 7, self.maze, 4, self.pacman, block_size),
+        self.ghosts = [RedGhost.RedGhost(9, 7, self.maze, 4, self.pacman, block_size),
                        PinkGhost.PinkGhost(9, 9, self.maze, 4, self.pacman, block_size)]
         self.ghosts.append(BlueGhost.BlueGhost(8, 9, self.maze, 4, self.pacman, block_size, self.ghosts[0]))
         self.ghosts.append(OrangeGhost.OrangeGhost(10, 9, self.maze, 4, self.pacman, block_size))
@@ -232,6 +252,7 @@ class GameController(object):
         self.draw_text()
         self.update_ghosts()
         self.update_pacman()
+        self.draw_targets()
 
     def start_game(self):
         while self.playing_game:

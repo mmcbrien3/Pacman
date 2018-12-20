@@ -9,7 +9,7 @@ class Ghost(object):
         self.speed = speed
         self.pacman = pacman
         self.block_size = block_size
-        self.target_square = None
+        self.target_square = (0, 0)
         self.last_decision_position = None
         self.screen_position = (x * block_size, y * block_size)
 
@@ -19,10 +19,15 @@ class Ghost(object):
         self.active = False
         self.mode_changed = False
 
+        self.cage_squares = ((9, 8), (8, 9), (9, 9), (10, 9))
+
     def set_scatter_square(self):
         pass
 
     def get_chase_target_square(self):
+        pass
+
+    def try_to_activate(self, pellets_collected):
         pass
 
     def get_scatter_target_square(self):
@@ -30,10 +35,21 @@ class Ghost(object):
         return self.target_square
 
     def get_target_square(self):
-        if self.chasing:
-            return self.get_chase_target_square()
-        elif self.scattering:
-            return self.get_scatter_target_square()
+        if self.active:
+            if self.position in self.cage_squares:
+                self.target_square = (9, 8)
+                return self.target_square
+            elif self.chasing:
+                return self.get_chase_target_square()
+            elif self.scattering:
+                return self.get_scatter_target_square()
+        else:
+            self.target_square = (9, 10)
+            return self.target_square
+
+    def get_inactive_target_square(self):
+        self.target_square = (9, 10)
+        return self.target_square
 
     def get_screen_x(self):
         return self.screen_position[0]

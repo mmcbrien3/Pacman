@@ -3,6 +3,9 @@ import math
 
 class OrangeGhost(Ghost.Ghost):
 
+    def __init__(self, x, y, maze, speed, pacman, block_size):
+        self.pellet_thresh = 60
+        super(OrangeGhost, self).__init__(x, y, maze, speed, pacman, block_size)
 
     def get_chase_target_square(self):
         enemy_x = self.pacman.get_x()
@@ -19,5 +22,11 @@ class OrangeGhost(Ghost.Ghost):
 
         return self.target_square
 
+    def try_to_activate(self, pellets_collected):
+        if pellets_collected >= self.pellet_thresh:
+            self.active = True
+            return True
+        return False
+
     def set_scatter_square(self):
-        self.scatter_square = (0, 21)
+        self.scatter_square = (0, 20)
