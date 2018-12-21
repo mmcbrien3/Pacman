@@ -24,8 +24,8 @@ class BlueGhost(Ghost.Ghost):
         elif enemy_dir == "W":
             future_enemy_x += 2
 
-        red_enemy_diff_y = future_enemy_y - enemy_y
-        red_enemy_diff_x = future_enemy_x - enemy_x
+        red_enemy_diff_y = future_enemy_y - red_ghost_y
+        red_enemy_diff_x = future_enemy_x - red_ghost_x
 
         red_enemy_diff_x *= 2
         red_enemy_diff_y *= 2

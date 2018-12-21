@@ -66,6 +66,29 @@ class Maze(object):
         if len(dirs) <= 2:
             return False
         return True
+    
+    def get_neighbors(self, x, y):
+        neighbors = {}
+        if x == 0:
+            neighbors["W"] = Cell.Cell(0, 0, ["N", "S", "E", "W"])
+            neighbors["E"] = self.cell_at(x + 1, y)
+        elif x == self.nx - 1:
+            neighbors["E"] = Cell.Cell(0, 0, ["N", "S", "E", "W"])
+            neighbors["W"] = self.cell_at(x - 1, y)
+        else:
+            neighbors["W"] = self.cell_at(x - 1, y)
+            neighbors["E"] = self.cell_at(x + 1, y)
+        if y == 0:
+            neighbors["N"] = Cell.Cell(0, 0, ["N", "S", "E", "W"])
+            neighbors["S"] = self.cell_at(x, y + 1)
+        elif y == self.ny - 1:
+            neighbors["S"] = Cell.Cell(0, 0, ["N", "S", "E", "W"])
+            neighbors["N"] = self.cell_at(x, y - 1)
+        else:
+            neighbors["N"] = self.cell_at(x, y - 1)
+            neighbors["S"] = self.cell_at(x, y + 1)
+        return neighbors
+
 
     def get_position_in_direction(self, x, y, d):
         x_ret = x
@@ -80,6 +103,18 @@ class Maze(object):
             x_ret -= 1
 
         return (x_ret, y_ret)
+    
+    def get_cells_walls(self, cell):
+        walls = []
+        if not cell.is_block():
+            return walls
+        else:
+            ns = self.get_neighbors(cell.get_x(), cell.get_y())
+            for d, n in ns.items():
+                if not n.is_block():
+                    walls.append(d)
+            return walls
+            
 
     def cell_at(self, x, y):
         """Return the Cell object at (x,y)."""

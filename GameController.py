@@ -3,7 +3,6 @@ import Maze, Pacman, Pellet, RedGhost, PinkGhost, BlueGhost, OrangeGhost
 
 block_size = 32
 size_of_grid = [19, 21]
-blockImage = pygame.image.load("Images/Block.bmp")
 pacmanImage = pygame.image.load("Images/Pacman.bmp")
 pelletImage = pygame.image.load("Images/Pellet.bmp")
 redGhostImage = pygame.image.load("Images/RedGhost.bmp")
@@ -15,6 +14,23 @@ pinkTargetImage = pygame.image.load("Images/PinkTarget.bmp")
 blueTargetImage = pygame.image.load("Images/BlueTarget.bmp")
 orangeTargetImage = pygame.image.load("Images/OrangeTarget.bmp")
 
+blockNSE = pygame.image.load("Images/BlockNSE.bmp")
+blockNSW = pygame.image.load("Images/BlockNSW.bmp")
+blockNEW = pygame.image.load("Images/BlockNEW.bmp")
+blockSEW = pygame.image.load("Images/BlockSEW.bmp")
+blockSE = pygame.image.load("Images/BlockSE.bmp")
+blockSW = pygame.image.load("Images/BlockSW.bmp")
+blockNS = pygame.image.load("Images/BlockNS.bmp")
+blockNW = pygame.image.load("Images/BlockNW.bmp")
+blockNE = pygame.image.load("Images/BlockNE.bmp")
+blockEW = pygame.image.load("Images/BlockEW.bmp")
+blockN = pygame.image.load("Images/BlockN.bmp")
+blockS = pygame.image.load("Images/BlockS.bmp")
+blockE = pygame.image.load("Images/BlockE.bmp")
+blockW = pygame.image.load("Images/BlockW.bmp")
+emptyBlock = pygame.image.load("Images/EmptyBlock.bmp")
+
+
 pacmanImage.set_colorkey((0, 0, 0))
 redGhostImage.set_colorkey((0, 0, 0))
 pinkGhostImage.set_colorkey((0, 0, 0))
@@ -25,11 +41,8 @@ pinkTargetImage.set_colorkey((0, 0, 0))
 blueTargetImage.set_colorkey((0, 0, 0))
 orangeTargetImage.set_colorkey((0, 0, 0))
 
-print(redGhostImage.get_colorkey())
-print(redTargetImage.get_colorkey())
-
-chaseInterval = 5
-scatterInterval = 3
+chaseInterval = 20
+scatterInterval = 7
 
 no_pellet_positions = ((8, 6), (10, 6),
 
@@ -118,10 +131,42 @@ class GameController(object):
 
     def draw_blocks(self):
         for cell in self.cells:
-            if cell.is_block():
-                screen_x = cell.get_x()*32
-                screen_y = cell.get_y()*32
-                self.screen.blit(blockImage, (screen_x, screen_y))
+            blockImage = None
+            screen_x = cell.get_x()*32
+            screen_y = cell.get_y()*32
+            walls = self.maze.get_cells_walls(cell)
+            walls.sort()
+            if len(walls) == 0 or len(walls) == 4:
+                blockImage = emptyBlock
+            elif walls == ["E", "W"]:
+                blockImage = blockEW
+            elif walls == ["N", "S"]:
+                blockImage = blockNS
+            elif walls == ["E", "N"]:
+                blockImage = blockNE
+            elif walls == ["E", "N", "W"]:
+                blockImage = blockNEW
+            elif walls == ["E", "N", "S"]:
+                blockImage = blockNSE
+            elif walls == ["N", "S", "W"]:
+                blockImage = blockNSW
+            elif walls == ["N", "W"]:
+                blockImage = blockNW
+            elif walls == ["E", "S"]:
+                blockImage = blockSE
+            elif walls == ["E", "S", "W"]:
+                blockImage = blockSEW
+            elif walls == ["S", "W"]:
+                blockImage = blockSW
+            elif walls == ["S"]:
+                blockImage = blockS
+            elif walls == ["W"]:
+                blockImage = blockW
+            elif walls == ["N"]:
+                blockImage = blockN
+            elif walls == ["E"]:
+                blockImage = blockE
+            self.screen.blit(blockImage, (screen_x, screen_y))
 
     def draw_background(self):
         self.screen.fill((0, 0, 0))
