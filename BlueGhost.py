@@ -1,10 +1,16 @@
 import Ghost
+import pygame
 
 class BlueGhost(Ghost.Ghost):
 
     def __init__(self, x, y, maze, speed, pacman, block_size, red_ghost):
         self.red_ghost = red_ghost
         self.pellet_thresh = 30
+        self.images = []
+        self.image_count = 0
+        for i in range(1, 4):
+            self.images.append(pygame.image.load("Images/BlueGhost_" + str(i) + ".bmp"))
+            self.images[i - 1].set_colorkey((0, 0, 0))
         super(BlueGhost, self).__init__(x, y, maze, speed, pacman, block_size)
 
     def get_chase_target_square(self):

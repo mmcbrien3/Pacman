@@ -1,3 +1,4 @@
+import pygame
 
 class Pacman(object):
 
@@ -7,6 +8,21 @@ class Pacman(object):
         self.screen_position = [a * block_size for a in self.position]
         self.speed = speed
         self.direction = "E"
+        self.images = []
+        self.image_count = 0
+        for i in range(1, 6):
+            self.images.append(pygame.image.load("Images/Pacman_" + str(i) + ".bmp"))
+            self.images[i-1].set_colorkey((0, 0, 0))
+
+    def get_cur_image(self, update=True):
+        if not update:
+            return self.images[self.image_count]
+
+        if self.image_count + 1 < len(self.images):
+            self.image_count += 1
+        else:
+            self.image_count = 0
+        return self.images[self.image_count]
 
     def get_x(self):
         return self.position[0]

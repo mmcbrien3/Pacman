@@ -3,12 +3,7 @@ import Maze, Pacman, Pellet, RedGhost, PinkGhost, BlueGhost, OrangeGhost
 
 block_size = 32
 size_of_grid = [19, 21]
-pacmanImage = pygame.image.load("Images/Pacman.bmp")
 pelletImage = pygame.image.load("Images/Pellet.bmp")
-redGhostImage = pygame.image.load("Images/RedGhost.bmp")
-pinkGhostImage = pygame.image.load("Images/PinkGhost.bmp")
-blueGhostImage = pygame.image.load("Images/BlueGhost.bmp")
-orangeGhostImage = pygame.image.load("Images/OrangeGhost.bmp")
 redTargetImage = pygame.image.load("Images/RedTarget.bmp")
 pinkTargetImage = pygame.image.load("Images/PinkTarget.bmp")
 blueTargetImage = pygame.image.load("Images/BlueTarget.bmp")
@@ -31,11 +26,6 @@ blockW = pygame.image.load("Images/BlockW.bmp")
 emptyBlock = pygame.image.load("Images/EmptyBlock.bmp")
 
 
-pacmanImage.set_colorkey((0, 0, 0))
-redGhostImage.set_colorkey((0, 0, 0))
-pinkGhostImage.set_colorkey((0, 0, 0))
-blueGhostImage.set_colorkey((0, 0, 0))
-orangeGhostImage.set_colorkey((0, 0, 0))
 redTargetImage.set_colorkey((0, 0, 0))
 pinkTargetImage.set_colorkey((0, 0, 0))
 blueTargetImage.set_colorkey((0, 0, 0))
@@ -202,7 +192,7 @@ class GameController(object):
                 cur_screen_x = cur_screen_x - g.speed
 
             g.set_screen_position(cur_screen_x, cur_screen_y)
-            self.screen.blit(self.ghost_images[i], (cur_screen_x, cur_screen_y))
+            self.screen.blit(g.get_cur_image(), (cur_screen_x, cur_screen_y))
 
             if self.position_changed(cur_screen_x, cur_screen_y):
                 g.set_position(int(cur_screen_x / 32), int(cur_screen_y / 32))
@@ -236,7 +226,7 @@ class GameController(object):
         if self.AI_playing:
             speed = 32
         self.pacman = Pacman.Pacman(9, 15, block_size, speed)
-        self.screen.blit(pacmanImage, (self.pacman.get_screen_x(), self.pacman.get_screen_y()))
+        self.screen.blit(self.pacman.get_cur_image(), (self.pacman.get_screen_x(), self.pacman.get_screen_y()))
         pygame.display.update()
 
     def add_ghosts(self):
@@ -244,13 +234,12 @@ class GameController(object):
                        PinkGhost.PinkGhost(9, 9, self.maze, 4, self.pacman, block_size)]
         self.ghosts.append(BlueGhost.BlueGhost(8, 9, self.maze, 4, self.pacman, block_size, self.ghosts[0]))
         self.ghosts.append(OrangeGhost.OrangeGhost(10, 9, self.maze, 4, self.pacman, block_size))
-        self.ghost_images = [redGhostImage, pinkGhostImage, blueGhostImage, orangeGhostImage]
-        pass
 
     def update_pacman(self):
         cur_screen_x = self.pacman.get_screen_x()
         cur_screen_y = self.pacman.get_screen_y()
-        if self.maze.is_path_legal(self.pacman.position[0], self.pacman.position[1], self.pacman.direction):
+        legal_path = self.maze.is_path_legal(self.pacman.position[0], self.pacman.position[1], self.pacman.direction)
+        if legal_path:
             if self.pacman.direction == "N":
                 cur_screen_y = cur_screen_y-self.pacman.speed
             elif self.pacman.direction == "S":
@@ -262,6 +251,8 @@ class GameController(object):
 
         self.pacman.set_screen_position(cur_screen_x, cur_screen_y)
 
+
+        pacmanImage = self.pacman.get_cur_image(legal_path)
         if self.pacman.direction == "N":
             self.screen.blit(pygame.transform.rotate(pacmanImage, 90), (cur_screen_x, cur_screen_y))
         elif self.pacman.direction == "S":
@@ -302,6 +293,9 @@ class GameController(object):
     def start_game(self):
         while self.playing_game:
 
+            if len(self.pellet_positions) == 0:
+                self.playing_game = False
+
             if not self.AI_playing:
                 self.read_keyboard_input()
             else:
@@ -337,7 +331,6 @@ class GameController(object):
                 data_file.writelines(self.input_to_print + "\n")
                 data_file.writelines(str(self.get_AI_inputs()) + "\n")
                 data_file.close()
-
 
             self.clock.tick(30)
 
@@ -405,13 +398,16 @@ class GameController(object):
 
         pellet_distances = self.get_pellet_distances(self.pacman.get_x(), self.pacman.get_y())
 
-        p_one = pellet_distances[0]
+        if len(pellet_distances) > 0:
+            p_one = pellet_distances[0]
 
-        p_one_ew = p_one[0]
-        p_one_ns = p_one[1]
+            p_one_ew = p_one[0]
+            p_one_ns = p_one[1]
+        else:
+            p_one_ew = 0
+            p_one_ns = 0
 
         stimuli = g_one_ns, g_one_ew,  g_two_ns, g_two_ew, wN, wS, wE, wW, p_one_ns, p_one_ew
-        print(stimuli)
         return stimuli
 
     def get_pellet_distances(self, x, y):

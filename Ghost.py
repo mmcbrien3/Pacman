@@ -47,6 +47,13 @@ class Ghost(object):
             self.target_square = (9, 10)
             return self.target_square
 
+    def get_cur_image(self):
+        if self.image_count + 1 < len(self.images):
+            self.image_count += 1
+        else:
+            self.image_count = 0
+        return self.images[self.image_count]
+
     def get_inactive_target_square(self):
         self.target_square = (9, 10)
         return self.target_square
