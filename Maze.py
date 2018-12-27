@@ -1,6 +1,21 @@
 import Cell
+import pygame
 
-
+blockNSE = pygame.image.load("Images/BlockNSE.bmp")
+blockNSW = pygame.image.load("Images/BlockNSW.bmp")
+blockNEW = pygame.image.load("Images/BlockNEW.bmp")
+blockSEW = pygame.image.load("Images/BlockSEW.bmp")
+blockSE = pygame.image.load("Images/BlockSE.bmp")
+blockSW = pygame.image.load("Images/BlockSW.bmp")
+blockNS = pygame.image.load("Images/BlockNS.bmp")
+blockNW = pygame.image.load("Images/BlockNW.bmp")
+blockNE = pygame.image.load("Images/BlockNE.bmp")
+blockEW = pygame.image.load("Images/BlockEW.bmp")
+blockN = pygame.image.load("Images/BlockN.bmp")
+blockS = pygame.image.load("Images/BlockS.bmp")
+blockE = pygame.image.load("Images/BlockE.bmp")
+blockW = pygame.image.load("Images/BlockW.bmp")
+emptyBlock = pygame.image.load("Images/EmptyBlock.bmp")
 
 class Maze(object):
     def __init__(self, nx, ny, ix=0, iy=0):
@@ -10,13 +25,33 @@ class Maze(object):
 
         """
 
+        self.no_pellet_positions = ((8, 6), (10, 6),
+
+                       (6, 7), (7, 7), (8, 7), (9, 7),
+                       (10, 7), (11, 7), (12, 7),
+
+                       (6, 8), (9, 8), (12, 8),
+
+                       (6, 10), (12, 10),
+
+                       (6, 11), (7, 11), (8, 11), (9, 11),
+                       (10, 11), (11, 11), (12,11),
+
+                       (6, 12), (12, 12),
+
+                       (0, 9), (1, 9), (2, 9), (3, 9),
+                       (5, 9), (6, 9), (8, 9), (9, 9),
+                       (10, 9), (12, 9), (13, 9), (15, 9),
+                       (16, 9), (17, 9), (18, 9))
+
+        self.no_turn_positions = {(8, 7): "N", (10, 7): "N", (8, 15): "N", (10, 15): "N"}
+
         self.nx, self.ny = nx, ny
         self.ix, self.iy = ix, iy
 
         file = open("PacmanMaze")
         mazeData = file.readlines()
         mazeData = [x.strip() for x in mazeData]
-        print(mazeData)
         x = 0
         y = 0
         for datum in mazeData:
@@ -30,6 +65,51 @@ class Maze(object):
             if x >= self.nx:
                 x = 0
                 y += 1
+
+        self.calculate_block_images()
+
+    def calculate_block_images(self):
+        self.block_images = []
+        for cell in self.list_cells():
+            blockImage = None
+            screen_x = cell.get_x() * 32
+            screen_y = cell.get_y() * 32
+            walls = self.get_cells_walls(cell)
+            walls.sort()
+            if len(walls) == 0 or len(walls) == 4:
+                blockImage = emptyBlock
+            elif walls == ["E", "W"]:
+                blockImage = blockEW
+            elif walls == ["N", "S"]:
+                blockImage = blockNS
+            elif walls == ["E", "N"]:
+                blockImage = blockNE
+            elif walls == ["E", "N", "W"]:
+                blockImage = blockNEW
+            elif walls == ["E", "N", "S"]:
+                blockImage = blockNSE
+            elif walls == ["N", "S", "W"]:
+                blockImage = blockNSW
+            elif walls == ["N", "W"]:
+                blockImage = blockNW
+            elif walls == ["E", "S"]:
+                blockImage = blockSE
+            elif walls == ["E", "S", "W"]:
+                blockImage = blockSEW
+            elif walls == ["S", "W"]:
+                blockImage = blockSW
+            elif walls == ["S"]:
+                blockImage = blockS
+            elif walls == ["W"]:
+                blockImage = blockW
+            elif walls == ["N"]:
+                blockImage = blockN
+            elif walls == ["E"]:
+                blockImage = blockE
+            self.block_images.append((blockImage, (screen_x, screen_y)))
+
+    def get_block_images(self):
+        return self.block_images
 
     def get_legal_directions(self, x, y):
         directions = ["N", "S", "E", "W"]

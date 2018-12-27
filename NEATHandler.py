@@ -9,6 +9,7 @@ import neat, GameController, pickle
 pac_inputs = [(0, 0,  0, 0, 1, 1, 1, 0, 0, -1), (0, 0,  0, 0, 1, 1, 0, 1, 0, 1), (0, 0,  0, 0, 0, 1, 1, 1, -1, 0), (0, 0,  0, 0, 1, 0, 1, 1, 1, 0)]
 pac_outputs = ["left", "right", "up", "down"]
 
+
 class NEATHandler(object):
 
     def __init__(self, gens):
@@ -18,7 +19,6 @@ class NEATHandler(object):
         self.numPerGen = 50
 
         self.run()
-
 
     def eval_genomes(self, genomes, config):
         for genome_id, genome in genomes:
@@ -36,7 +36,6 @@ class NEATHandler(object):
                 self.num = 1
                 self.gen += 1
             self.num += 1
-            print("Done with generation #%s" % (self.gen))
 
     def select_key_from_net(self):
         outputs = self.net.activate(self.inputs)
@@ -64,7 +63,7 @@ class NEATHandler(object):
         p.add_reporter(neat.StdOutReporter(True))
         stats = neat.StatisticsReporter()
         p.add_reporter(stats)
-        p.add_reporter(neat.Checkpointer(5))
+        p.add_reporter(neat.Checkpointer(1, filename_prefix="./NeatCheckpoints/neat-checkpoint-"))
 
         winner = p.run(self.eval_genomes, self.gens)
 
@@ -80,4 +79,4 @@ if __name__ == '__main__':
     # here so that the script will run successfully regardless of the
     # current working directory.
 
-    NEATHandler(300)
+    NEATHandler(1000)

@@ -116,11 +116,19 @@ class Ghost(object):
             options.remove(self.maze.get_position_in_direction(self.position[0], self.position[1], self.get_opposite_direction()))
         except:
             pass
+
         directions = self.maze.get_legal_directions(self.position[0], self.position[1])
         try:
             directions.remove(self.get_opposite_direction())
         except:
             pass
+
+        if self.position in self.maze.no_turn_positions:
+            try:
+                options.remove(self.maze.get_position_in_direction(self.position[0], self.position[1], self.maze.no_turn_positions[self.position]))
+                directions.remove(self.maze.no_turn_positions[self.position])
+            except:
+                pass
         if len(options) == 0:
             return self.get_opposite_direction()
         min_o = math.sqrt((options[0][0] - target_x) ** 2 + (options[0][1] - target_y) ** 2)

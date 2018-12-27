@@ -34,29 +34,11 @@ orangeTargetImage.set_colorkey((0, 0, 0))
 chaseInterval = 20
 scatterInterval = 7
 
-no_pellet_positions = ((8, 6), (10, 6),
-
-                       (6, 7), (7, 7), (8, 7), (9, 7),
-                       (10, 7), (11, 7), (12, 7),
-
-                       (6, 8), (9, 8), (12, 8),
-
-                       (6, 10), (12, 10),
-
-                       (6, 11), (7, 11), (8, 11), (9, 11),
-                       (10, 11), (11, 11), (12,11),
-
-                       (6, 12), (12, 12),
-
-                       (0, 9), (1, 9), (2, 9), (3, 9),
-                       (5, 9), (6, 9), (8, 9), (9, 9),
-                       (10, 9), (12, 9), (13, 9), (15, 9),
-                       (16, 9), (17, 9), (18, 9))
-
 class GameController(object):
 
 
     def __init__(self, AI_Player):
+        self.ghosts_playing = True
         self.Jarvis = AI_Player
         self.AI_playing = False
         if self.Jarvis is not None:
@@ -72,6 +54,8 @@ class GameController(object):
 
     def setup(self):
         pygame.init()
+
+        self.lives = 3
 
         pygame.font.init()
         self.screen_font = pygame.font.SysFont('Comic Sans MS', 12)
@@ -107,7 +91,7 @@ class GameController(object):
         self.pellets = []
         self.pellet_positions = []
         for cell in self.cells:
-            if not cell.is_block() and not cell.position in no_pellet_positions:
+            if not cell.is_block() and not cell.position in self.maze.no_pellet_positions:
                 self.pellets.append(Pellet.Pellet(cell.get_x(), cell.get_y(), block_size))
                 self.pellet_positions.append((cell.get_x(), cell.get_y()))
         self.total_pellets = len(self.pellets)
@@ -120,43 +104,8 @@ class GameController(object):
                 self.screen.blit(pelletImage, (p.screen_position[0], p.screen_position[1]))
 
     def draw_blocks(self):
-        for cell in self.cells:
-            blockImage = None
-            screen_x = cell.get_x()*32
-            screen_y = cell.get_y()*32
-            walls = self.maze.get_cells_walls(cell)
-            walls.sort()
-            if len(walls) == 0 or len(walls) == 4:
-                blockImage = emptyBlock
-            elif walls == ["E", "W"]:
-                blockImage = blockEW
-            elif walls == ["N", "S"]:
-                blockImage = blockNS
-            elif walls == ["E", "N"]:
-                blockImage = blockNE
-            elif walls == ["E", "N", "W"]:
-                blockImage = blockNEW
-            elif walls == ["E", "N", "S"]:
-                blockImage = blockNSE
-            elif walls == ["N", "S", "W"]:
-                blockImage = blockNSW
-            elif walls == ["N", "W"]:
-                blockImage = blockNW
-            elif walls == ["E", "S"]:
-                blockImage = blockSE
-            elif walls == ["E", "S", "W"]:
-                blockImage = blockSEW
-            elif walls == ["S", "W"]:
-                blockImage = blockSW
-            elif walls == ["S"]:
-                blockImage = blockS
-            elif walls == ["W"]:
-                blockImage = blockW
-            elif walls == ["N"]:
-                blockImage = blockN
-            elif walls == ["E"]:
-                blockImage = blockE
-            self.screen.blit(blockImage, (screen_x, screen_y))
+        for b in self.maze.get_block_images():
+            self.screen.blit(b[0], b[1])
 
     def draw_background(self):
         self.screen.fill((0, 0, 0))
@@ -166,15 +115,20 @@ class GameController(object):
         score_surface = self.screen_font.render('Score: %s' % self.score, False, (255,255,255))
         self.screen.blit(score_surface, (5, 5))
 
-        if not self.AI_playing:
-            return
-        gen_surface = self.screen_font.render('Gen: %s' % self.Jarvis.gen, False, (255,255,255))
-        num_surface = self.screen_font.render('Num: %s' % self.Jarvis.num, False, (255,255,255))
+        for i in range(self.lives - 1):
+            self.screen.blit(self.pacman.images[0], (block_size, block_size*(8+i*1.1)))
 
-        self.screen.blit(gen_surface, (165, 5))
-        self.screen.blit(num_surface, (300, 5))
+        if self.AI_playing:
+            gen_surface = self.screen_font.render('Gen: %s' % self.Jarvis.gen, False, (255,255,255))
+            num_surface = self.screen_font.render('Num: %s' % self.Jarvis.num, False, (255,255,255))
+
+            self.screen.blit(gen_surface, (165, 5))
+            self.screen.blit(num_surface, (300, 5))
+
         
     def update_ghosts(self):
+        if not self.ghosts_playing:
+            return
         self.update_ghost_mode()
         for i, g in enumerate(self.ghosts):
             if not g.active:
@@ -182,20 +136,25 @@ class GameController(object):
             g.update_direction()
             cur_screen_x = g.get_screen_x()
             cur_screen_y = g.get_screen_y()
+            new_screen_x = g.get_screen_x()
+            new_screen_y = g.get_screen_y()
             if g.direction == "N":
-                cur_screen_y = cur_screen_y - g.speed
+                new_screen_y = cur_screen_y - g.speed
             elif g.direction == "S":
-                cur_screen_y = cur_screen_y + g.speed
+                new_screen_y = cur_screen_y + g.speed
             elif g.direction == "E":
-                cur_screen_x = cur_screen_x + g.speed
+                new_screen_x = cur_screen_x + g.speed
             elif g.direction == "W":
-                cur_screen_x = cur_screen_x - g.speed
+                new_screen_x = cur_screen_x - g.speed
 
-            g.set_screen_position(cur_screen_x, cur_screen_y)
-            self.screen.blit(g.get_cur_image(), (cur_screen_x, cur_screen_y))
+            if self.position_changed(cur_screen_x, cur_screen_y, new_screen_x, new_screen_y):
+                new_screen_x = block_size * round(new_screen_x / block_size)
+                new_screen_y = block_size * round(new_screen_y / block_size)
+                g.set_position(int(new_screen_x / block_size), int(new_screen_y / block_size))
 
-            if self.position_changed(cur_screen_x, cur_screen_y):
-                g.set_position(int(cur_screen_x / 32), int(cur_screen_y / 32))
+            g.set_screen_position(new_screen_x, new_screen_y)
+            self.screen.blit(g.get_cur_image(), (new_screen_x, new_screen_y))
+
                 
     def draw_targets(self):
         self.screen.blit(redTargetImage, (self.ghosts[0].target_square[0]*block_size, self.ghosts[0].target_square[1]*block_size))
@@ -204,6 +163,8 @@ class GameController(object):
         self.screen.blit(orangeTargetImage, (self.ghosts[3].target_square[0]*block_size, self.ghosts[3].target_square[1]*block_size))
 
     def update_ghost_mode(self):
+        if not self.ghosts_playing:
+            return
         if self.scatter:
             if time.time() - self.scatter_start > scatterInterval:
                 self.chase_start = time.time()
@@ -222,7 +183,7 @@ class GameController(object):
 
 
     def add_pacman(self):
-        speed = 4
+        speed = 5
         if self.AI_playing:
             speed = 32
         self.pacman = Pacman.Pacman(9, 15, block_size, speed)
@@ -230,6 +191,8 @@ class GameController(object):
         pygame.display.update()
 
     def add_ghosts(self):
+        if not self.ghosts_playing:
+            return
         self.ghosts = [RedGhost.RedGhost(9, 7, self.maze, 4, self.pacman, block_size),
                        PinkGhost.PinkGhost(9, 9, self.maze, 4, self.pacman, block_size)]
         self.ghosts.append(BlueGhost.BlueGhost(8, 9, self.maze, 4, self.pacman, block_size, self.ghosts[0]))
@@ -238,19 +201,24 @@ class GameController(object):
     def update_pacman(self):
         cur_screen_x = self.pacman.get_screen_x()
         cur_screen_y = self.pacman.get_screen_y()
+        new_screen_x, new_screen_y = self.pacman.get_screen_x(), self.pacman.get_screen_y()
         legal_path = self.maze.is_path_legal(self.pacman.position[0], self.pacman.position[1], self.pacman.direction)
         if legal_path:
             if self.pacman.direction == "N":
-                cur_screen_y = cur_screen_y-self.pacman.speed
+                new_screen_y = cur_screen_y-self.pacman.speed
             elif self.pacman.direction == "S":
-                cur_screen_y = cur_screen_y + self.pacman.speed
+                new_screen_y = cur_screen_y + self.pacman.speed
             elif self.pacman.direction == "E":
-                cur_screen_x = cur_screen_x + self.pacman.speed
+                new_screen_x = cur_screen_x + self.pacman.speed
             elif self.pacman.direction == "W":
-                cur_screen_x = cur_screen_x - self.pacman.speed
+                new_screen_x = cur_screen_x - self.pacman.speed
 
-        self.pacman.set_screen_position(cur_screen_x, cur_screen_y)
-
+        if self.position_changed(cur_screen_x, cur_screen_y, new_screen_x, new_screen_y):
+            self.pacman_position_changed = True
+            new_screen_x = block_size * round(new_screen_x/block_size)
+            new_screen_y = block_size * round(new_screen_y/block_size)
+            self.pacman.set_position(int(new_screen_x / block_size), int(new_screen_y / block_size))
+        self.pacman.set_screen_position(new_screen_x, new_screen_y)
 
         pacmanImage = self.pacman.get_cur_image(legal_path)
         if self.pacman.direction == "N":
@@ -271,15 +239,20 @@ class GameController(object):
             elif self.last_direction == "W":
                 self.screen.blit(pygame.transform.rotate(pacmanImage, 180), (cur_screen_x, cur_screen_y))
 
-        if self.position_changed(cur_screen_x, cur_screen_y):
-            self.pacman_position_changed = True
-            self.pacman.set_position(int(cur_screen_x / 32), int(cur_screen_y / 32))
+
     
-    def position_changed(self, x, y):
-        if x % 32 == 0 and y % 32 == 0:
+    def position_changed(self, old_x, old_y, new_x, new_y):
+        if new_x % block_size == 0 and new_y % block_size == 0:
             return True
-        else:
-            return False
+        elif new_x > old_x and new_x % block_size < old_x % block_size and not old_x % block_size == 0:
+            return True
+        elif new_x < old_x and new_x % block_size > old_x % block_size and not old_x % block_size == 0:
+            return True
+        elif new_y > old_y and new_y % block_size < old_y % block_size and not old_y % block_size == 0:
+            return True
+        elif new_y < old_y and new_y % block_size > old_y % block_size and not old_y % block_size == 0:
+            return True
+        return False
         
     def draw_everything(self):
         self.draw_background()
@@ -288,7 +261,7 @@ class GameController(object):
         self.draw_text()
         self.update_ghosts()
         self.update_pacman()
-        self.draw_targets()
+        #self.draw_targets()
 
     def start_game(self):
         while self.playing_game:
@@ -313,6 +286,8 @@ class GameController(object):
                     self.last_score_increase = time.time()
                     self.pellet_positions.remove(self.pacman.position)
 
+            self.check_for_death()
+
             pygame.display.update()
             pygame.event.pump()
 
@@ -326,13 +301,15 @@ class GameController(object):
                     self.cur_position = self.pacman.position
                     self.last_position_change = time.time()
 
-            if not self.AI_playing:
-                data_file = open(r".\dataFile.txt", "a")
-                data_file.writelines(self.input_to_print + "\n")
-                data_file.writelines(str(self.get_AI_inputs()) + "\n")
-                data_file.close()
-
             self.clock.tick(30)
+
+    def check_for_death(self):
+        ghost_positions = [g.position for g in self.ghosts]
+        if self.pacman.position in ghost_positions:
+            self.reduce_lives()
+
+    def reduce_lives(self):
+        self.lives -= 1
 
     def read_keyboard_input(self):
         self.input_to_print = self.pacman.direction
