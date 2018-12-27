@@ -18,38 +18,24 @@ blockW = pygame.image.load("Images/BlockW.bmp")
 emptyBlock = pygame.image.load("Images/EmptyBlock.bmp")
 
 class Maze(object):
-    def __init__(self, nx, ny, ix=0, iy=0):
+    def __init__(self, nx, ny, file_loc="PacmanMaze", ix=0, iy=0):
         """Initialize the maze grid.
         The maze consists of nx x ny cells and will be constructed starting
         at the cell indexed at (ix, iy).
 
         """
 
-        self.no_pellet_positions = ((8, 6), (10, 6),
-
-                       (6, 7), (7, 7), (8, 7), (9, 7),
-                       (10, 7), (11, 7), (12, 7),
-
-                       (6, 8), (9, 8), (12, 8),
-
-                       (6, 10), (12, 10),
-
-                       (6, 11), (7, 11), (8, 11), (9, 11),
-                       (10, 11), (11, 11), (12,11),
-
-                       (6, 12), (12, 12),
-
-                       (0, 9), (1, 9), (2, 9), (3, 9),
-                       (5, 9), (6, 9), (8, 9), (9, 9),
-                       (10, 9), (12, 9), (13, 9), (15, 9),
-                       (16, 9), (17, 9), (18, 9))
+        self.no_pellet_positions = []
+        for x in range(5, 14):
+            for y in range(6, 13):
+                self.no_pellet_positions.append((x, y))
 
         self.no_turn_positions = {(8, 7): "N", (10, 7): "N", (8, 15): "N", (10, 15): "N"}
 
         self.nx, self.ny = nx, ny
         self.ix, self.iy = ix, iy
 
-        file = open("PacmanMaze")
+        file = open(file_loc)
         mazeData = file.readlines()
         mazeData = [x.strip() for x in mazeData]
         x = 0

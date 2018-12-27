@@ -1,5 +1,5 @@
 import pygame, time, math
-import Maze, Pacman, Pellet, RedGhost, PinkGhost, BlueGhost, OrangeGhost
+import Maze, Pacman, Pellet, RedGhost, PinkGhost, BlueGhost, OrangeGhost, LevelOne, LevelTwo
 
 block_size = 32
 size_of_grid = [19, 21]
@@ -34,6 +34,8 @@ orangeTargetImage.set_colorkey((0, 0, 0))
 chaseInterval = 20
 scatterInterval = 7
 
+max_level = 2
+
 class GameController(object):
 
 
@@ -43,24 +45,20 @@ class GameController(object):
         self.AI_playing = False
         if self.Jarvis is not None:
             self.AI_playing = True
-        self.setup()
-        self.build_maze()
-        self.add_pellets()
-        self.add_pacman()
-        self.cur_position = self.pacman.position
-        self.add_ghosts()
+        self.game_setup()
+
         self.start_game()
 
 
-    def setup(self):
+    def game_setup(self):
         pygame.init()
 
         self.lives = 3
-
+        self.level = LevelOne.LevelOne()
         pygame.font.init()
         self.screen_font = pygame.font.SysFont('Comic Sans MS', 12)
 
-        size = [a*32 for a in size_of_grid]
+        size = [a*block_size for a in size_of_grid]
         self.screen = pygame.display.set_mode(size)
         pygame.display.set_caption("My Computer Learns Pacman")
 
@@ -69,6 +67,12 @@ class GameController(object):
         self.ghost_position_changed = [False, False, False, False]
         self.playing_game = True
         self.score = 0
+        self.clock = pygame.time.Clock()
+
+        self.level_setup()
+
+    def level_setup(self):
+        self.level_beaten = False
         self.last_score_increase = time.time()
         self.last_position_change = time.time()
         self.start_time = time.time()
@@ -76,13 +80,26 @@ class GameController(object):
         self.chase_start = None
         self.scatter = True
         self.chase = False
+        self.build_maze()
+        self.add_pellets()
 
+        self.reset_level()
 
-        self.clock = pygame.time.Clock()
+    def reset_level(self):
+        self.remove_pacman()
+        self.remove_ghosts()
+        self.add_pacman()
+        self.cur_position = self.pacman.position
+        self.add_ghosts()
 
+    def remove_pacman(self):
+        self.pacman = None
+
+    def remove_ghosts(self):
+        self.ghosts = []
 
     def build_maze(self):
-        self.maze = Maze.Maze(size_of_grid[0], size_of_grid[1])
+        self.maze = self.level.maze
         self.cells = self.maze.list_cells()
         self.draw_blocks()
         pygame.display.update()
@@ -166,24 +183,22 @@ class GameController(object):
         if not self.ghosts_playing:
             return
         if self.scatter:
-            if time.time() - self.scatter_start > scatterInterval:
+            if time.time() - self.scatter_start > self.level.ghost_sequences[0][1]:
                 self.chase_start = time.time()
                 self.chase = True
                 self.scatter = False
                 for g in self.ghosts:
                     g.update_mode()
         elif self.chase:
-            if time.time() - self.chase_start > chaseInterval:
+            if time.time() - self.chase_start > self.level.ghost_sequences[0][0]:
                 self.scatter_start = time.time()
                 self.chase = False
                 self.scatter = True
                 for g in self.ghosts:
                     g.update_mode()
 
-
-
     def add_pacman(self):
-        speed = 5
+        speed = self.level.pacman_speed
         if self.AI_playing:
             speed = 32
         self.pacman = Pacman.Pacman(9, 15, block_size, speed)
@@ -193,10 +208,10 @@ class GameController(object):
     def add_ghosts(self):
         if not self.ghosts_playing:
             return
-        self.ghosts = [RedGhost.RedGhost(9, 7, self.maze, 4, self.pacman, block_size),
-                       PinkGhost.PinkGhost(9, 9, self.maze, 4, self.pacman, block_size)]
-        self.ghosts.append(BlueGhost.BlueGhost(8, 9, self.maze, 4, self.pacman, block_size, self.ghosts[0]))
-        self.ghosts.append(OrangeGhost.OrangeGhost(10, 9, self.maze, 4, self.pacman, block_size))
+        self.ghosts = [RedGhost.RedGhost(9, 7, self.maze, self.level.ghost_speed, self.pacman, block_size),
+                       PinkGhost.PinkGhost(9, 9, self.maze, self.level.ghost_speed, self.pacman, block_size)]
+        self.ghosts.append(BlueGhost.BlueGhost(8, 9, self.maze, self.level.ghost_speed, self.pacman, block_size, self.ghosts[0]))
+        self.ghosts.append(OrangeGhost.OrangeGhost(10, 9, self.maze, self.level.ghost_speed, self.pacman, block_size))
 
     def update_pacman(self):
         cur_screen_x = self.pacman.get_screen_x()
@@ -267,7 +282,7 @@ class GameController(object):
         while self.playing_game:
 
             if len(self.pellet_positions) == 0:
-                self.playing_game = False
+                self.increment_level()
 
             if not self.AI_playing:
                 self.read_keyboard_input()
@@ -309,7 +324,20 @@ class GameController(object):
             self.reduce_lives()
 
     def reduce_lives(self):
-        self.lives -= 1
+        if self.lives > 1:
+            self.lives -= 1
+            time.sleep(2)
+            self.reset_level()
+        else:
+            self.playing_game = False
+
+    def increment_level(self):
+        if self.level.number == max_level:
+            self.playing_game = False
+            return
+        else:
+            self.level = self.level.get_next_level()
+            self.level_setup()
 
     def read_keyboard_input(self):
         self.input_to_print = self.pacman.direction
