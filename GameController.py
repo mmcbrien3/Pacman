@@ -41,9 +41,10 @@ class GameController(object):
 
 
     def __init__(self, genomes, config, gen):
-        self.ghosts_playing = True
+        self.ghosts_playing = False
         self.AI_playing = False
         self.fr = 30
+        self.cur_frame = 0
         if genomes is not None:
             self.AI_playing = True
             self.fr = 99999
@@ -78,6 +79,9 @@ class GameController(object):
             self.lives = [3]
         else:
             self.lives = [1] * len(self.pacman)
+        self.last_moved_frame = [0] * len(self.pacman)
+        self.last_collect_frame = [0] * len(self.pacman)
+
 
     def level_setup(self):
         self.build_maze()
@@ -256,8 +260,10 @@ class GameController(object):
             self.ghosts[i].append(OrangeGhost.OrangeGhost(10, 9, self.maze, self.level.ghost_speed, self.pacman[i], block_size))
 
     def update_pacman(self):
+        c = 0
         for p in self.pacman:
             if not p.alive:
+                c += 1
                 continue
             cur_screen_x = p.get_screen_x()
             cur_screen_y = p.get_screen_y()
@@ -265,19 +271,19 @@ class GameController(object):
             legal_path = self.maze.is_path_legal(p.position[0], p.position[1], p.direction)
             if legal_path:
                 if p.direction == "N":
-                    new_screen_y = cur_screen_y-p.speed
+                    new_screen_y = cur_screen_y - p.speed
                 elif p.direction == "S":
                     new_screen_y = cur_screen_y + p.speed
                 elif p.direction == "E":
                     new_screen_x = cur_screen_x + p.speed
                 elif p.direction == "W":
                     new_screen_x = cur_screen_x - p.speed
-
             if self.position_changed(cur_screen_x, cur_screen_y, new_screen_x, new_screen_y):
-                p_position_changed = True
                 new_screen_x = block_size * round(new_screen_x/block_size)
                 new_screen_y = block_size * round(new_screen_y/block_size)
                 p.set_position(int(new_screen_x / block_size), int(new_screen_y / block_size))
+            if new_screen_x != cur_screen_x or new_screen_y != cur_screen_y:
+                self.last_moved_frame[c] = self.cur_frame
             p.set_screen_position(new_screen_x, new_screen_y)
 
             pacmanImage = p.get_cur_image(legal_path)
@@ -298,13 +304,13 @@ class GameController(object):
                     self.screen.blit(pacmanImage, (cur_screen_x, cur_screen_y))
                 elif self.last_direction == "W":
                     self.screen.blit(pygame.transform.rotate(pacmanImage, 180), (cur_screen_x, cur_screen_y))
-
+            c+=1
 
 
     def position_changed(self, old_x, old_y, new_x, new_y):
         if new_x % block_size == 0 and new_y % block_size == 0:
             return True
-        elif new_x > old_x and new_x % block_size < old_x % block_size and not old_x % block_size == 0:
+        if new_x > old_x and new_x % block_size < old_x % block_size and not old_x % block_size == 0:
             return True
         elif new_x < old_x and new_x % block_size > old_x % block_size and not old_x % block_size == 0:
             return True
@@ -343,11 +349,9 @@ class GameController(object):
             c = 0
             for p in self.pacman:
                 if p.alive:
-                    if not self.maze.is_path_legal(p.get_x(), p.get_y(), p.direction):
-                        self.last_direction = p.direction
-                    self.pacman_position_changed = False
                     if p.position in self.pellet_positions[c]:
                         self.scores[c] += 10
+                        self.last_collect_frame[c] += 10
                         self.pellet_positions[c].remove(p.position)
                 c += 1
 
@@ -362,15 +366,20 @@ class GameController(object):
             time_since_last_score = time.time() - self.last_score_increase
             time_since_last_position_change = time.time() - self.last_position_change
             self.clock.tick(self.fr)
+            self.cur_frame += 1
 
     def check_for_death(self):
         c = 0
         for p in self.pacman:
             if p.alive:
-                cur_ghosts = self.ghosts[c]
-                ghost_positions = [g.position for g in cur_ghosts]
-                if p.position in ghost_positions:
-                    self.reduce_lives(c)
+                if self.ghosts_playing:
+                    cur_ghosts = self.ghosts[c]
+                    ghost_positions = [g.position for g in cur_ghosts]
+                    if p.position in ghost_positions:
+                        self.reduce_lives(c)
+                if self.AI_playing:
+                    if self.cur_frame - 30 > self.last_moved_frame[c] or self.cur_frame - 30 > self.last_collect_frame[c]:
+                        self.reduce_lives(c)
             c += 1
 
     def reduce_lives(self, c):
@@ -425,19 +434,19 @@ class GameController(object):
         s = self.get_stimuli(p, c)
         pressed_key = np.argmax(net.activate(s))
         in_center = p.get_screen_x() % 32 == 0 and p.get_screen_y() % 32 == 0
-        if pressed_key == 1:
+        if pressed_key == 0:
             if self.maze.is_path_legal(p.get_x(), p.get_y(), "W"):
                 if p.direction == "E" or in_center:
                     p.set_direction("W")
-        if pressed_key == 2:
+        if pressed_key == 1:
             if self.maze.is_path_legal(p.get_x(), p.get_y(), "E"):
                 if p.direction == "W" or in_center:
                     p.set_direction("E")
-        if pressed_key == 3:
+        if pressed_key == 2:
             if self.maze.is_path_legal(p.get_x(), p.get_y(), "S"):
                 if p.direction == "N" or in_center:
                     p.set_direction("S")
-        if pressed_key == 4:
+        if pressed_key == 3:
             if self.maze.is_path_legal(p.get_x(), p.get_y(), "N"):
                 if p.direction == "S" or in_center:
                     p.set_direction("N")
@@ -447,7 +456,7 @@ class GameController(object):
 
         g_one_ns, g_one_ew, g_two_ns, g_two_ew = 0, 0, 0, 0
         wN, wS, wE, wW = 0, 0, 0, 0
-        pn, ps, pe, pw = 0, 0, 0, 0
+        pn, ps, pe, pw = 20,20,20,20
         if not self.maze.is_path_legal(p.get_x(), p.get_y(), "N"):
             wN = 1
         if not self.maze.is_path_legal(p.get_x(), p.get_y(), "S"):
@@ -460,15 +469,22 @@ class GameController(object):
         pellet_distances = self.get_pellet_distances(p.get_x(), p.get_y(), c)
 
         if len(pellet_distances) > 0:
-            for p in pellet_distances:
-                if p[0] >= 0:
-                    pe = p[0]
-                if p[0] <= 0:
-                    pw = abs(p[0])
-                if p[1] >= 0:
-                    ps = p[1]
-                if p[1] <= 0:
-                    pn = abs(p[1])
+            try:
+                pe = min([d[0] for d in pellet_distances if d[0] >= 0 and d[1] == 0])
+            except:
+                pe = 20
+            try:
+                pw = abs(max([d[0] for d in pellet_distances if d[0] <= 0 and d[1] == 0]))
+            except:
+                pw = 20
+            try:
+                ps = min([d[1] for d in pellet_distances if d[1] >= 0 and d[0] == 0])
+            except:
+                ps = 20
+            try:
+                pn = abs(max([d[1] for d in pellet_distances if d[1] <= 0 and d[0] == 0]))
+            except:
+                pn = 20
         else:
             pn = -1
             ps = -1
