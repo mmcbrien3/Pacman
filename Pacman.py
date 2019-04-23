@@ -10,6 +10,7 @@ class Pacman(object):
         self.direction = "E"
         self.images = []
         self.image_count = 0
+        self.alive = True
         for i in range(1, 6):
             self.images.append(pygame.image.load("Images/Pacman_" + str(i) + ".bmp"))
             self.images[i-1].set_colorkey((0, 0, 0))

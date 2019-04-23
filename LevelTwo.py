@@ -9,3 +9,4 @@ class LevelTwo(object):
         self.pacman_speed = 5
         self.ghost_speed = 4
         self.ghost_sequences = [[20, 5]]
+        self.number = 2
